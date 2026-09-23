@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>台灣即時氣象地圖</title>
+  <meta name="description" content="中央氣象署開放資料即時視覺化地圖（類 Windy 風格）" />
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600&display=swap"
+    rel="stylesheet" />
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+
+  <!-- Map Container -->
+  <div id="map"></div>
+
+  <!-- Loading Overlay -->
+  <div id="loading" class="loading-overlay">
+    <div class="loading-card">
+      <div class="loading-spinner"></div>
+      <span>正在取得中央氣象署即時資料…</span>
+    </div>
+  </div>
+
+  <!-- Left Info Panel -->
+  <div class="info-panel" id="info-panel">
+    <!-- Header -->
+    <div class="info-header">
+      <div class="info-title">台灣即時氣象</div>
+      <span class="info-badge">即時 API</span>
+    </div>
+
+    <!-- Meta Info -->
+    <div class="info-meta">
+      <div class="info-meta-row">
+        <span class="info-meta-label">觀測時間：</span>
+        <span class="info-meta-value" id="obs-time">載入中…</span>
+      </div>
+      <div class="info-meta-row">
+        <span class="info-meta-label">資料來源：</span>
+        <span class="info-meta-value">CWA O-A0003-001</span>
+      </div>
+      <div class="info-meta-row">
+        <span class="info-meta-label">本次讀取：</span>
+        <span class="info-meta-value">即時呼叫 CWA API（已更新資料庫）</span>
+      </div>
+      <div class="info-meta-row">
+        <span class="info-meta-label">測站數量：</span>
+        <span class="info-meta-value"><span id="station-count-info">—</span> 站</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Status Bar -->
+  <div class="status-bar" id="status-bar">
+    <span id="update-time">最新於 —</span>
+    <button class="status-refresh-btn" id="refresh-btn" title="重新整理">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+        stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="1 4 1 10 7 10"></polyline>
+        <path d="M3.51 15a9 9 0 1 0 .49-3.62"></path>
+      </svg>
+      重新整理
+    </button>
+  </div>
+
+  <!-- Right Panel: Layer & Map Controls -->
+  <div class="side-panel" id="side-panel">
+    <!-- Layer Selection -->
+    <div class="panel-section">
+      <div class="panel-label">圖層</div>
+      <div class="layer-buttons" id="layer-buttons">
+        <button class="layer-btn active" data-layer="temperature" id="btn-temperature">
+          <span class="layer-icon">🌡️</span>
+          <span>氣溫</span>
+        </button>
+        <button class="layer-btn" data-layer="precipitation" id="btn-precipitation">
+          <span class="layer-icon">🌧️</span>
+          <span>雨量</span>
+        </button>
+        <button class="layer-btn" data-layer="wind" id="btn-wind">
+          <span class="layer-icon">💨</span>
+          <span>風速風向</span>
+        </button>
+        <button class="layer-btn" data-layer="humidity" id="btn-humidity">
+          <span class="layer-icon">💧</span>
+          <span>濕度</span>
+        </button>
+        <button class="layer-btn" data-layer="weather" id="btn-weather">
+          <span class="layer-icon">⛅</span>
+          <span>天氣</span>
+        </button>
+        <button class="layer-btn" data-layer="pressure" id="btn-pressure">
+          <span class="layer-icon">🔵</span>
+          <span>氣壓</span>
+        </button>
+        <button class="layer-btn" data-layer="uv" id="btn-uv">
+          <span class="layer-icon">☀️</span>
+          <span>紫外線</span>
+        </button>
+        <button class="layer-btn" data-layer="stations" id="btn-stations">
+          <span class="layer-icon">📍</span>
+          <span>測站點位</span>
+        </button>
+      </div>
+
+      <!-- Options -->
+      <label class="toggle-label" id="toggle-labels">
+        <input type="checkbox" id="show-labels" checked />
+        <span class="toggle-text">數值標籤</span>
+      </label>
+      <label class="toggle-label" id="toggle-county">
+        <input type="checkbox" id="show-county" checked />
+        <span class="toggle-text">縣市標示</span>
+      </label>
+
+      <!-- Base Map -->
+      <div class="panel-label">底圖</div>
+      <div class="basemap-buttons">
+        <button class="basemap-btn active" data-basemap="dark" id="btn-dark">深色</button>
+        <button class="basemap-btn" data-basemap="street" id="btn-street">街道圖</button>
+        <button class="basemap-btn" data-basemap="satellite" id="btn-satellite">衛星</button>
+      </div>
+    </div>
+
+    <!-- Locate Button -->
+    <button class="locate-btn" id="locate-btn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <circle cx="12" cy="12" r="3"></circle>
+        <line x1="12" y1="2" x2="12" y2="5"></line>
+        <line x1="12" y1="19" x2="12" y2="22"></line>
+        <line x1="2" y1="12" x2="5" y2="12"></line>
+        <line x1="19" y1="12" x2="22" y2="12"></line>
+      </svg>
+      定位我的位置
+    </button>
+  </div>
+
+  <!-- Bottom Right: Legend -->
+  <div class="legend-panel" id="legend-panel">
+    <div class="legend-title" id="legend-title">°C 氣溫</div>
+    <div class="legend-bar" id="legend-bar"></div>
+    <div class="legend-labels" id="legend-labels"></div>
+  </div>
+
+  <!-- Station Detail Card (popup) -->
+  <div class="station-detail" id="station-detail">
+    <div class="detail-header">
+      <div class="detail-title-group">
+        <span class="detail-weather-icon" id="detail-weather-icon">⛅</span>
+        <div>
+          <div class="detail-station-name" id="detail-station-name">—</div>
+          <div class="detail-location" id="detail-location">—</div>
+        </div>
+      </div>
+      <button class="detail-close" id="detail-close">✕</button>
+    </div>
+    <div class="detail-time" id="detail-time">—</div>
+    <div class="detail-grid">
+      <div class="detail-item">
+        <div class="detail-label">🌡️ 氣溫</div>
+        <div class="detail-value" id="detail-temp">—</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">💧 濕度</div>
+        <div class="detail-value" id="detail-humidity">—</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">💨 風速</div>
+        <div class="detail-value" id="detail-wind">—</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">🧭 風向</div>
+        <div class="detail-value" id="detail-windir">—</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">🌧️ 雨量</div>
+        <div class="detail-value" id="detail-rain">—</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">🔵 氣壓</div>
+        <div class="detail-value" id="detail-pressure">—</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">☀️ 紫外線</div>
+        <div class="detail-value" id="detail-uv">—</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">⛰️ 海拔</div>
+        <div class="detail-value" id="detail-alt">—</div>
+      </div>
+    </div>
+    <div class="detail-extreme">
+      <span id="detail-high">—</span>
+      <span id="detail-low">—</span>
+    </div>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="app.js"></script>
+</body>
+
+</html>

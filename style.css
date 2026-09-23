@@ -1,0 +1,747 @@
+/* ─────────────────────────────────────────────────────────────
+   台灣即時氣象地圖 — style.css
+   ───────────────────────────────────────────────────────────── */
+
+:root {
+  --bg-dark: #0a0f1e;
+  --panel-bg: rgba(12, 18, 35, 0.88);
+  --panel-border: rgba(255, 255, 255, 0.08);
+  --panel-hover: rgba(255, 255, 255, 0.08);
+  --accent: #38bdf8;
+  --accent-hover: #0ea5e9;
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --success: #34d399;
+  --warning: #fbbf24;
+  --danger: #f87171;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 1px 0 rgba(255,255,255,0.05) inset;
+  --font-sans: 'Noto Sans TC', 'Outfit', system-ui, sans-serif;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-dark);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Map ───────────────────────────────────────────────────── */
+#map {
+  width: 100vw;
+  height: 100vh;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+/* ── Loading Overlay ────────────────────────────────────────── */
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 15, 30, 0.80);
+  backdrop-filter: blur(4px);
+  transition: opacity 0.4s ease, visibility 0.4s ease;
+}
+
+.loading-overlay.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.loading-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  padding: 20px 28px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-primary);
+  box-shadow: var(--shadow);
+}
+
+.loading-spinner {
+  width: 22px;
+  height: 22px;
+  border: 2.5px solid rgba(56, 189, 248, 0.25);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Left Info Panel ────────────────────────────────────────── */
+.info-panel {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 900;
+  width: 210px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  padding: 14px;
+  backdrop-filter: blur(20px);
+  box-shadow: var(--shadow);
+  pointer-events: auto;
+}
+
+.info-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.info-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.02em;
+}
+
+.info-badge {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 3px 7px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(56,189,248,0.25), rgba(14,165,233,0.15));
+  color: var(--accent);
+  border: 1px solid rgba(56,189,248,0.30);
+  white-space: nowrap;
+}
+
+/* Meta rows */
+.info-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--panel-border);
+  margin-bottom: 10px;
+}
+
+.info-meta-row {
+  display: flex;
+  font-size: 11px;
+  line-height: 1.5;
+  gap: 2px;
+}
+
+.info-meta-label {
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.info-meta-value {
+  color: var(--text-secondary);
+  word-break: break-all;
+}
+
+/* Stats cards */
+.info-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.stat-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.stat-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.stat-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1;
+  font-feature-settings: "tnum";
+  margin-bottom: 3px;
+}
+
+.stat-station {
+  font-size: 9px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Bottom Status Bar ──────────────────────────────────────── */
+.status-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  z-index: 900;
+  width: 100%;
+  background: rgba(8, 12, 26, 0.88);
+  border-top: 1px solid var(--panel-border);
+  backdrop-filter: blur(12px);
+  padding: 6px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 11px;
+  color: var(--text-muted);
+  pointer-events: auto;
+}
+
+.status-refresh-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  background: rgba(255,255,255,0.05);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s;
+}
+
+.status-refresh-btn:hover {
+  background: rgba(56,189,248,0.12);
+  color: var(--accent);
+}
+
+.status-refresh-btn.spinning svg {
+  animation: spin 0.9s linear infinite;
+}
+
+/* ── Side Panel ─────────────────────────────────────────────── */
+.side-panel {
+  position: absolute;
+  top: 60px;
+  right: 14px;
+  z-index: 900;
+  width: 210px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: auto;
+}
+
+.panel-section {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  padding: 12px;
+  backdrop-filter: blur(16px);
+  box-shadow: var(--shadow);
+}
+
+.panel-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+/* Layer Buttons */
+.layer-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.layer-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s, transform 0.1s;
+  text-align: left;
+  width: 100%;
+}
+
+.layer-btn:hover {
+  background: var(--panel-hover);
+  color: var(--text-primary);
+}
+
+.layer-btn.active {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(14, 165, 233, 0.15));
+  color: #fff;
+  font-weight: 600;
+  border: 1px solid rgba(56, 189, 248, 0.30);
+}
+
+.layer-btn:active { transform: scale(0.97); }
+
+.layer-icon {
+  font-size: 15px;
+  width: 18px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+/* Toggle Options */
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  transition: background 0.18s;
+  font-size: 13px;
+  color: var(--text-secondary);
+  user-select: none;
+}
+
+.toggle-label:hover {
+  background: var(--panel-hover);
+  color: var(--text-primary);
+}
+
+.toggle-label:not(:last-child) {
+  margin-bottom: 2px;
+}
+
+.toggle-label input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* Base Map Buttons */
+.basemap-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 4px;
+}
+
+.basemap-btn {
+  padding: 6px 4px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s;
+}
+
+.basemap-btn:hover {
+  background: var(--panel-hover);
+  color: var(--text-primary);
+}
+
+.basemap-btn.active {
+  background: rgba(56, 189, 248, 0.25);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* Locate Button */
+.locate-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px;
+  border: none;
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, #059669, #10b981);
+  color: #fff;
+  font-size: 13px;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.15s;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+}
+
+.locate-btn:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+.locate-btn:active {
+  transform: scale(0.97) translateY(0);
+}
+
+/* Station Count */
+.station-count {
+  text-align: center;
+  font-size: 10px;
+  color: var(--text-muted);
+  padding: 4px;
+}
+
+/* ── Legend Panel ───────────────────────────────────────────── */
+.legend-panel {
+  position: absolute;
+  bottom: 46px;
+  right: 14px;
+  z-index: 900;
+  width: 230px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  backdrop-filter: blur(16px);
+  box-shadow: var(--shadow);
+}
+
+.legend-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.legend-bar {
+  height: 10px;
+  border-radius: 6px;
+  width: 100%;
+}
+
+.legend-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  font-size: 9px;
+  color: var(--text-muted);
+  font-feature-settings: "tnum";
+}
+
+/* ── Station Detail Card ────────────────────────────────────── */
+.station-detail {
+  position: absolute;
+  bottom: 46px;
+  left: 14px;
+  z-index: 900;
+  width: 290px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  padding: 16px;
+  backdrop-filter: blur(20px);
+  box-shadow: var(--shadow);
+  display: none;
+  animation: slideUp 0.25s ease;
+}
+
+.station-detail.visible {
+  display: block;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.detail-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.detail-weather-icon {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.detail-station-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.detail-location {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.detail-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.detail-close:hover {
+  background: rgba(255,255,255,0.08);
+  color: var(--text-primary);
+}
+
+.detail-time {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.detail-item {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.detail-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-bottom: 3px;
+}
+
+.detail-value {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-feature-settings: "tnum";
+}
+
+.detail-extreme {
+  display: flex;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+  padding-top: 8px;
+  border-top: 1px solid var(--panel-border);
+}
+
+.detail-extreme span {
+  flex: 1;
+  text-align: center;
+  padding: 5px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 6px;
+}
+
+/* ── Custom Leaflet Marker Styles ─────────────────────────────── */
+.weather-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-weight: 700;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  border: 2px solid rgba(255,255,255,0.25);
+  transition: transform 0.18s, box-shadow 0.18s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.45);
+  user-select: none;
+}
+
+.weather-marker:hover {
+  transform: scale(1.25);
+  z-index: 999 !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+}
+
+.weather-marker.size-sm {
+  width: 28px;
+  height: 28px;
+  font-size: 10px;
+}
+
+.weather-marker.size-md {
+  width: 36px;
+  height: 36px;
+  font-size: 11px;
+}
+
+.weather-marker.size-lg {
+  width: 44px;
+  height: 44px;
+  font-size: 13px;
+}
+
+/* Wind arrow marker */
+.wind-marker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  gap: 2px;
+}
+
+.wind-speed-label {
+  background: rgba(12, 18, 35, 0.8);
+  color: #e2e8f0;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 1px solid rgba(255,255,255,0.12);
+  white-space: nowrap;
+}
+
+.wind-arrow {
+  font-size: 20px;
+  line-height: 1;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.6));
+  transition: transform 0.2s;
+}
+
+/* Station dot marker */
+.station-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--accent);
+  border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,0.5);
+  cursor: pointer;
+  transition: transform 0.15s;
+  box-shadow: 0 0 6px rgba(56, 189, 248, 0.6);
+}
+
+.station-dot:hover {
+  transform: scale(1.8);
+}
+
+/* Weather emoji marker */
+.weather-emoji-marker {
+  font-size: 22px;
+  cursor: pointer;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7));
+  transition: transform 0.18s;
+  line-height: 1;
+}
+
+.weather-emoji-marker:hover {
+  transform: scale(1.4);
+  z-index: 999 !important;
+}
+
+/* ── Leaflet overrides ─────────────────────────────────────── */
+.leaflet-container {
+  font-family: var(--font-sans);
+}
+
+.leaflet-control-zoom {
+  border: 1px solid var(--panel-border) !important;
+  border-radius: var(--radius-sm) !important;
+  overflow: hidden;
+  box-shadow: var(--shadow) !important;
+}
+
+.leaflet-control-zoom a {
+  background: var(--panel-bg) !important;
+  color: var(--text-secondary) !important;
+  border-bottom: 1px solid var(--panel-border) !important;
+  backdrop-filter: blur(16px);
+  transition: background 0.15s, color 0.15s !important;
+  width: 30px !important;
+  height: 30px !important;
+  line-height: 30px !important;
+  font-size: 16px !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background: var(--panel-hover) !important;
+  color: var(--text-primary) !important;
+}
+
+.leaflet-popup-content-wrapper {
+  background: var(--panel-bg) !important;
+  border: 1px solid var(--panel-border) !important;
+  border-radius: var(--radius) !important;
+  box-shadow: var(--shadow) !important;
+  color: var(--text-primary) !important;
+  backdrop-filter: blur(16px);
+}
+
+.leaflet-popup-tip {
+  background: var(--panel-bg) !important;
+}
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .side-panel {
+    top: auto;
+    bottom: 110px;
+    right: 10px;
+    width: 185px;
+  }
+
+  .info-panel {
+    width: calc(100vw - 20px);
+    top: 10px;
+    left: 10px;
+    right: 10px;
+  }
+
+  .legend-panel {
+    display: none;
+  }
+
+  .station-detail {
+    left: 10px;
+    right: 10px;
+    bottom: 46px;
+    width: auto;
+  }
+}
