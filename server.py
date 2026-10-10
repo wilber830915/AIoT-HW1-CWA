@@ -12,7 +12,10 @@ import cwa_service
 # ==============================
 # Flask App 初始化 (Vercel 必需暴露 app 變數)
 # ==============================
-app = Flask(__name__, static_folder="public", static_url_path="")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PUBLIC_DIR = os.path.join(BASE_DIR, "public")
+
+app = Flask(__name__, static_folder=PUBLIC_DIR, static_url_path="")
 
 # ==============================
 # 靜態資源 (前端 HTML/JS/CSS)
