@@ -1,4 +1,4 @@
-# 🌤️ Taiwan Weather Forecast & Interactive Map 台灣即時氣象地圖專案
+# 🌤️ 台灣即時氣象地圖專案
 
 本專案結合了中央氣象署 (CWA) OpenData API、SQLite 資料庫持久化儲存，以及極具科技感的現代化深色玻璃擬態 (Glassmorphism) 全台互動式天氣地圖。
 
