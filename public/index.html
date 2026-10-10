@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>台灣即時氣象地圖 Taiwan Weather Map | 類 Windy 氣象儀表板</title>
+  <meta name="description" content="中央氣象署 CWA 開放資料即時視覺化地圖（類 Windy 風格）與未來一週氣溫預報儀表板。">
+
+  <!-- Google Fonts: Inter & Noto Sans TC -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap"
+    rel="stylesheet">
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <div id="app" class="app-container">
+
+    <!-- 全螢幕地圖容器 -->
+    <div id="map" class="map-viewport" tabindex="-1"></div>
+
+    <!-- 頂部資訊與導航列 -->
+    <header class="top-nav glass-panel">
+      <div class="nav-brand">
+        <span class="brand-icon">🌤️</span>
+        <div class="brand-text">
+          <h1 class="brand-title">台灣即時氣象地圖</h1>
+          <p class="brand-subtitle">Taiwan Weather Forecast Dashboard</p>
+        </div>
+      </div>
+
+      <!-- 快捷操作列 -->
+      <div class="nav-actions">
+        <button id="btn-toggle-forecast" class="btn btn-primary" title="開啟一週預報與折線圖">
+          <span>📈</span>
+          <span class="btn-text">一週預報</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- 右上角：圖層與底圖控制面板 (類 Windy 風格) -->
+    <aside class="layer-control glass-panel" id="layer-control">
+      <div class="panel-section">
+        <div class="section-title">氣象圖層</div>
+        <div class="layer-buttons">
+          <button class="layer-btn active" data-layer="temp">
+            <span class="layer-emoji">🌡️</span>
+            <span class="layer-name">氣溫</span>
+          </button>
+          <button class="layer-btn" data-layer="rain">
+            <span class="layer-emoji">🌧️</span>
+            <span class="layer-name">雨量</span>
+          </button>
+          <button class="layer-btn" data-layer="radar">
+            <span class="layer-emoji">🛰️</span>
+            <span class="layer-name">雷達</span>
+          </button>
+          <button class="layer-btn" data-layer="wind">
+            <span class="layer-emoji">💨</span>
+            <span class="layer-name">風速風向</span>
+          </button>
+          <button class="layer-btn" data-layer="humidity">
+            <span class="layer-emoji">💧</span>
+            <span class="layer-name">濕度</span>
+          </button>
+          <button class="layer-btn" data-layer="weather">
+            <span class="layer-emoji">⛅</span>
+            <span class="layer-name">天氣現象</span>
+          </button>
+          <button class="layer-btn" data-layer="typhoon">
+            <span class="layer-emoji">🌀</span>
+            <span class="layer-name">颱風</span>
+          </button>
+          <button class="layer-btn" data-layer="stations">
+            <span class="layer-emoji">📍</span>
+            <span class="layer-name">測站點位</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 圖層自訂開關 -->
+      <div class="panel-section toggles-section">
+        <label class="toggle-item">
+          <input type="checkbox" id="chk-counties" checked>
+          <span class="toggle-label">縣市界線</span>
+        </label>
+        <label class="toggle-item">
+          <input type="checkbox" id="chk-temp-labels" checked>
+          <span class="toggle-label">氣溫數字標籤</span>
+        </label>
+      </div>
+
+      <!-- 底圖樣式切換 -->
+      <div class="panel-section basemap-section">
+        <div class="section-title">底圖</div>
+        <div class="basemap-grid">
+          <button class="basemap-btn active" data-basemap="dark">深色</button>
+          <button class="basemap-btn" data-basemap="streets">街道圖</button>
+        </div>
+      </div>
+
+      <!-- 定位按鈕 -->
+      <div class="panel-section location-section">
+        <button id="btn-locate" class="btn btn-locate">
+          <span>📌</span>
+          <span>定位我的位置</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- 右下角：動態色標圖例 (Legend) -->
+    <div class="legend-container glass-panel" id="map-legend">
+      <div class="legend-header">
+        <span class="legend-unit" id="legend-unit">°C</span>
+        <span class="legend-title" id="legend-title">氣溫色標</span>
+      </div>
+      <div class="legend-bar-wrapper">
+        <div class="legend-bar" id="legend-bar"></div>
+        <div class="legend-labels" id="legend-labels">
+          <span>5</span><span>10</span><span>15</span><span>20</span><span>24</span><span>28</span><span>32</span><span>36</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 左下角：資料來源與更新時間 -->
+    <div class="status-badge glass-panel">
+      <label>
+        <span class="source-tag">資料來源：CWA O-A0003-001</span>
+      </label>
+      <label class="toggle-item">
+        <span class="pulse-dot"></span>
+        <span id="last-updated-text">即時觀測更新於 --:--</span>
+        <button id="btn-refresh" class="btn btn-secondary" title="重新整理資料">
+          <span id="refresh-icon">🔄</span>
+          <span class="btn-text">更新</span>
+        </button>
+      </label>
+    </div>
+
+
+    <!-- 側邊/底部抽屜：一週預報與折線圖分析 (對照微課程海報 Step 11~19) -->
+    <section class="forecast-drawer glass-panel" id="forecast-drawer">
+      <div class="drawer-header">
+        <div class="drawer-title-group">
+          <h2 class="drawer-title">各縣市一週氣象預報分析</h2>
+        </div>
+        <div class="drawer-controls">
+          <!-- 下拉選單選擇地區 (海報 Step 13) -->
+          <div class="select-wrapper">
+            <label for="select-region" class="sr-only">選擇地區</label>
+            <select id="select-region" class="form-select">
+              <optgroup label="北部地區">
+                <option value="臺北市">臺北市</option>
+                <option value="新北市">新北市</option>
+                <option value="基隆市">基隆市</option>
+                <option value="桃園市">桃園市</option>
+                <option value="新竹市">新竹市</option>
+                <option value="新竹縣">新竹縣</option>
+                <option value="宜蘭縣">宜蘭縣</option>
+              </optgroup>
+              <optgroup label="中部地區">
+                <option value="臺中市" selected>臺中市</option>
+                <option value="苗栗縣">苗栗縣</option>
+                <option value="彰化縣">彰化縣</option>
+                <option value="南投縣">南投縣</option>
+                <option value="雲林縣">雲林縣</option>
+              </optgroup>
+              <optgroup label="南部地區">
+                <option value="嘉義市">嘉義市</option>
+                <option value="嘉義縣">嘉義縣</option>
+                <option value="臺南市">臺南市</option>
+                <option value="高雄市">高雄市</option>
+                <option value="屏東縣">屏東縣</option>
+              </optgroup>
+              <optgroup label="東部地區">
+                <option value="花蓮縣">花蓮縣</option>
+                <option value="臺東縣">臺東縣</option>
+              </optgroup>
+              <optgroup label="離島地區">
+                <option value="澎湖縣">澎湖縣</option>
+                <option value="金門縣">金門縣</option>
+                <option value="連江縣">連江縣</option>
+              </optgroup>
+            </select>
+          </div>
+          <button id="btn-close-drawer" class="btn-icon" title="關閉預報面版">✕</button>
+        </div>
+      </div>
+
+      <!-- 抽屜內容主體：折線圖 + 資料表格 -->
+      <div class="drawer-body">
+
+        <!-- 海報 Step 14: 繪製一週最高與最低氣溫折線圖 -->
+        <div class="chart-container">
+          <div class="chart-header">
+            <h3 class="chart-title">一週氣溫走勢圖 (最高溫 MaxT vs 最低溫 MinT)</h3>
+            <div class="chart-legend">
+              <span class="chart-legend-item max"><span class="dot dot-max"></span> 最高溫 (MaxT)</span>
+              <span class="chart-legend-item min"><span class="dot dot-min"></span> 最低溫 (MinT)</span>
+            </div>
+          </div>
+          <div class="canvas-wrapper">
+            <canvas id="tempChart"></canvas>
+          </div>
+        </div>
+
+        <!-- 海報 Step 15: 顯示資料表格 (Date, MinT, MaxT, PoP, Weather) -->
+        <div class="table-container">
+          <div class="table-header">
+            <h3 class="table-title">一週天氣預報資料表 (SQLite: data.db)</h3>
+          </div>
+          <div class="table-scroll">
+            <table class="forecast-table" id="forecast-table">
+              <thead>
+                <tr>
+                  <th>日期 (Date)</th>
+                  <th>天氣概況</th>
+                  <th>最低溫 (MinT)</th>
+                  <th>最高溫 (MaxT)</th>
+                  <th>溫差</th>
+                  <th>降雨機率</th>
+                </tr>
+              </thead>
+              <tbody id="forecast-tbody">
+                <!-- 動態注入預報資料 -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- 測站詳細資訊彈出卡片 (點選地圖測站時顯示) -->
+    <div class="station-modal glass-panel" id="station-modal">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title" id="modal-station-name">測站名稱</h3>
+          <p class="modal-subtitle" id="modal-station-sub">縣市行政區 (ID)</p>
+        </div>
+        <button class="btn-icon" id="btn-close-modal">✕</button>
+      </div>
+      <div class="modal-grid">
+        <div class="modal-card">
+          <span class="m-card-icon">🌡️</span>
+          <span class="m-card-label">即時氣溫</span>
+          <span class="m-card-val" id="modal-temp">--°C</span>
+        </div>
+        <div class="modal-card">
+          <span class="m-card-icon">💧</span>
+          <span class="m-card-label">相對濕度</span>
+          <span class="m-card-val" id="modal-humidity">--%</span>
+        </div>
+        <div class="modal-card">
+          <span class="m-card-icon">🌧️</span>
+          <span class="m-card-label">時降雨量</span>
+          <span class="m-card-val" id="modal-rain">-- mm</span>
+        </div>
+        <div class="modal-card">
+          <span class="m-card-icon">💨</span>
+          <span class="m-card-label">風向風速</span>
+          <span class="m-card-val" id="modal-wind">-- m/s</span>
+        </div>
+        <div class="modal-card">
+          <span class="m-card-icon">🧭</span>
+          <span class="m-card-label">大氣壓力</span>
+          <span class="m-card-val" id="modal-pressure">-- hPa</span>
+        </div>
+        <div class="modal-card">
+          <span class="m-card-icon">⛅</span>
+          <span class="m-card-label">觀測天氣</span>
+          <span class="m-card-val" id="modal-weather">--</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="modal-btn-view-week" class="btn btn-primary w-full">查看該縣市一週預報與折線圖 ➔</button>
+      </div>
+    </div>
+
+    <!-- 警報廣播橫幅 -->
+    <div id="warning-banner" class="warning-banner" style="display: none;">
+      <span class="warning-icon">⚠️</span>
+      <span id="warning-text" class="warning-text">氣象特報資訊</span>
+      <button class="btn-icon" id="btn-dismiss-warning">✕</button>
+    </div>
+
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <!-- Chart.js (用於一週最高低氣溫折線圖) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- Main Application Script -->
+  <script src="app.js"></script>
+</body>
+
+</html>
