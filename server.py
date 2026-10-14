@@ -22,7 +22,10 @@ def get_current_weather():
         data = cwa_service.fetch_realtime_observations()
         features = data.get("data", {}).get("features", [])
         if features:
-            database.save_station_observations(features) # 注意：需搭配雲端資料庫
+            try:
+                database.save_station_observations(features) # Vercel 檔案系統唯讀，寫入失敗不影響回傳
+            except Exception as db_err:
+                print(f"[Server] 測站資料寫入資料庫略過: {db_err}")
         return jsonify(data)
     except Exception as e:
         return jsonify({"error": str(e), "success": False}), 500
@@ -32,13 +35,19 @@ def get_forecast():
     try:
         region = request.args.get("region")
         if region:
-            records = database.get_forecasts_by_region(region)
+            try:
+                records = database.get_forecasts_by_region(region)
+            except Exception:
+                records = []
             if not records:
                 fc = cwa_service.fetch_week_forecasts()
                 locs = fc.get("locations", {})
-                if region in locs:
-                    database.save_forecasts(region, locs[region])
-                    records = database.get_forecasts_by_region(region)
+                records = locs.get(region, [])
+                if records:
+                    try:
+                        database.save_forecasts(region, records)
+                    except Exception as db_err:
+                        print(f"[Server] 預報資料寫入資料庫略過: {db_err}")
             return jsonify({"success": True, "region": region, "forecasts": records})
         else:
             fc = cwa_service.fetch_week_forecasts()
@@ -49,7 +58,10 @@ def get_forecast():
 @app.route("/api/weather/regions", methods=["GET"])
 def get_regions():
     try:
-        regions = database.get_distinct_regions()
+        try:
+            regions = database.get_distinct_regions()
+        except Exception:
+            regions = []
         return jsonify({"success": True, "regions": regions})
     except Exception as e:
         return jsonify({"error": str(e), "success": False}), 500
