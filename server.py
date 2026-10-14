@@ -1,102 +1,96 @@
 """
 server.py
-台灣即時氣象地圖 - Flask Web 後端
-提供 RESTful API，供 Vercel Serverless 部署使用
+輕量高效 Python Web 伺服器
+提供 RESTful API 與靜態資源服務 (public/ 目錄)
+使用標準庫 http.server，開箱即用無需額外依賴
 """
-
 import os
-import json
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request
+from flask_cors import CORS
+import database
 import cwa_service
 
-# ==============================
-# Flask App 初始化 (Vercel 必需暴露 app 變數)
-# ==============================
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PUBLIC_DIR = os.path.join(BASE_DIR, "public")
+app = Flask(__name__)
+CORS(app) # 允許跨來源請求
 
-app = Flask(__name__, static_folder=PUBLIC_DIR, static_url_path="")
+# 確保資料庫初始化（注意：在 Vercel 上建議移到雲端，見第二步）
+# database.init_db() 
 
-# ==============================
-# 靜態資源 (前端 HTML/JS/CSS)
-# ==============================
-@app.route("/")
-def index():
-    return send_from_directory("public", "index.html")
-
-@app.route("/<path:filename>")
-def static_files(filename):
-    return send_from_directory("public", filename)
-
-# ==============================
-# API 路由
-# ==============================
-
-@app.route("/api/weather/current")
-def api_weather_current():
-    """即時測站觀測 API"""
+@app.route("/api/weather/current", methods=["GET"])
+def get_current_weather():
     try:
         data = cwa_service.fetch_realtime_observations()
+        features = data.get("data", {}).get("features", [])
+        if features:
+            database.save_station_observations(features) # 注意：需搭配雲端資料庫
         return jsonify(data)
     except Exception as e:
         return jsonify({"error": str(e), "success": False}), 500
 
-
-@app.route("/api/weather/forecast")
-def api_weather_forecast():
-    """一週天氣預報 API (支援 ?region=臺中市)"""
+@app.route("/api/weather/forecast", methods=["GET"])
+def get_forecast():
     try:
         region = request.args.get("region")
-        fc = cwa_service.fetch_week_forecasts()
-
         if region:
-            locs = fc.get("locations", {})
-            records = locs.get(region, [])
+            records = database.get_forecasts_by_region(region)
+            if not records:
+                fc = cwa_service.fetch_week_forecasts()
+                locs = fc.get("locations", {})
+                if region in locs:
+                    database.save_forecasts(region, locs[region])
+                    records = database.get_forecasts_by_region(region)
             return jsonify({"success": True, "region": region, "forecasts": records})
         else:
+            fc = cwa_service.fetch_week_forecasts()
             return jsonify(fc)
     except Exception as e:
         return jsonify({"error": str(e), "success": False}), 500
 
-
-@app.route("/api/weather/regions")
-def api_weather_regions():
-    """預報地區清單 API"""
+@app.route("/api/weather/regions", methods=["GET"])
+def get_regions():
     try:
-        fc = cwa_service.fetch_week_forecasts()
-        regions = list(fc.get("locations", {}).keys())
+        regions = database.get_distinct_regions()
         return jsonify({"success": True, "regions": regions})
     except Exception as e:
         return jsonify({"error": str(e), "success": False}), 500
 
-
-@app.route("/api/warnings")
-def api_warnings():
-    """天氣警報特報 API"""
+@app.route("/api/warnings", methods=["GET"])
+def get_warnings():
     try:
-        data = cwa_service.fetch_warnings()
-        return jsonify(data)
+        return jsonify(cwa_service.fetch_warnings())
     except Exception as e:
         return jsonify({"error": str(e), "success": False}), 500
 
-
-@app.route("/api/typhoon")
-def api_typhoon():
-    """颱風資訊 API"""
+@app.route("/api/typhoon", methods=["GET"])
+def get_typhoon():
     try:
-        data = cwa_service.fetch_typhoon_info()
-        return jsonify(data)
+        return jsonify(cwa_service.fetch_typhoon_info())
     except Exception as e:
         return jsonify({"error": str(e), "success": False}), 500
 
+@app.route("/api/sync", methods=["POST"])
+def sync_data():
+    try:
+        obs = cwa_service.fetch_realtime_observations()
+        fc = cwa_service.fetch_week_forecasts()
+        
+        features = obs.get("data", {}).get("features", [])
+        if features:
+            database.save_station_observations(features)
+        
+        total_fc = 0
+        for rname, ritems in fc.get("locations", {}).items():
+            total_fc += database.save_forecasts(rname, ritems)
 
-# ==============================
-# 本機開發啟動入口
-# ==============================
+        return jsonify({
+            "success": True,
+            "message": "CWA 氣象資料同步成功！",
+            "stationCount": len(features),
+            "forecastCount": total_fc
+        })
+    except Exception as e:
+        return jsonify({"error": str(e), "success": False}), 500
+
+# 本地測試用，Vercel 部署時不會執行這段
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))
-    print("=" * 60)
-    print("🌦️  Taiwan Weather Dashboard (台灣即時氣象地圖)")
-    print(f"🚀 伺服器正在運行: http://localhost:{port}")
-    print("=" * 60)
-    app.run(host="0.0.0.0", port=port, debug=True)
+    app.run(port=8000, debug=True)
