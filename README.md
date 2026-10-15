@@ -22,7 +22,7 @@
 * **⚠️ 即時氣象特報橫幅**：連線氣象署發布之強風、豪大雨、陸上強風警報
 
 ### 2. 完整實作微課程 24 步驟核心成果
-* **CWA API 資料擷取**：介接 `F-D0047-091` (一週天氣預報) 與 `O-A0001-001` (自動氣象站觀測)
+* **CWA API 資料擷取**：介接 `F-D0047-091` (一週天氣預報) 與 `O-A0003-001` (自動氣象站現在天氣觀測報告)
 * **SQLite 資料庫儲存**：本地 `data.db`，設計 `TemperatureForecasts` 表格結構
 * **一週最高溫與最低溫平滑折線圖**：採用 Chart.js 繪製雙軸漸層貝茲曲線（最高溫 MaxT 紅線 vs 最低溫 MinT 藍線）
 * **預報資料表格**：清楚呈現日期、天氣概況、最低溫、最高溫、溫差與降雨機率 (PoP)
@@ -54,7 +54,7 @@ L3_CWAv2/
 
 | 海報步驟 | 課程主題 | 專案中對應實作位置 |
 |---|---|---|
-| **Step 3~4** | CWA API 資料取得 | `cwa_service.py` 呼叫 `O-A0001-001` 與 `F-D0047-091` |
+| **Step 3~4** | CWA API 資料取得 | `cwa_service.py` 呼叫 `O-A0003-001` 與 `F-D0047-091` |
 | **Step 5~6** | JSON 解析與提取 MinT/MaxT | `cwa_service.py` 解析時間陣列並提取最低/最高氣溫 |
 | **Step 7** | 資料整理與預覽 (Pandas) | `database.py` 中的 `get_forecasts_dataframe()` |
 | **Step 8~9** | 建立 SQLite 資料庫與表格設計 | `database.py` 建立 `data.db` 與 `TemperatureForecasts` 表 |

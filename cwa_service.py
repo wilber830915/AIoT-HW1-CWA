@@ -45,7 +45,7 @@ def set_cache(key: str, val: Any, ttl: int = CACHE_TTL):
 
 def fetch_realtime_observations() -> Dict[str, Any]:
     """
-    海報 Step 4, 5: 取得全台自動氣象站即時觀測資料 (O-A0001-001)
+    海報 Step 4, 5: 取得全台自動氣象站現在天氣觀測報告 (O-A0003-001)
     包含各測站經緯度、氣溫、濕度、風向風速、雨量、天氣現象
     若 CWA 連線超時或受限，自動平滑切換至備用快取來源
     """
@@ -54,7 +54,7 @@ def fetch_realtime_observations() -> Dict[str, Any]:
     if cached:
         return cached
 
-    url = f"{CWA_BASE_URL}/O-A0001-001?Authorization={CWA_API_KEY}"
+    url = f"{CWA_BASE_URL}/O-A0003-001?Authorization={CWA_API_KEY}"
     features = []
     
     try:
@@ -162,7 +162,7 @@ def fetch_realtime_observations() -> Dict[str, Any]:
                     }
                 })
     except Exception as e:
-        print(f"[CWA Service] 呼叫 O-A0001-001 異常: {e}")
+        print(f"[CWA Service] 呼叫 O-A0003-001 異常: {e}")
 
     # 若 CWA 連線未取到或測站數過少，使用即時鏡像源作為平滑備援
     if len(features) < 10:
