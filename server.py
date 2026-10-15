@@ -5,29 +5,55 @@ server.py
 使用標準庫 http.server，開箱即用無需額外依賴
 """
 import os
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 import database
 import cwa_service
 
-app = Flask(__name__)
+PUBLIC_DIR = os.path.join(os.path.dirname(__file__), "public")
+app = Flask(__name__, static_folder=PUBLIC_DIR, static_url_path="")
 CORS(app) # 允許跨來源請求
 
-# 確保資料庫初始化（注意：在 Vercel 上建議移到雲端，見第二步）
-# database.init_db() 
+# Vercel 執行環境會自動設定 VERCEL=1；本機執行則無此變數
+IS_VERCEL = bool(os.environ.get("VERCEL"))
+
+# 本機：初始化 SQLite 資料庫（Vercel 檔案系統唯讀，故不執行）
+if not IS_VERCEL:
+    try:
+        database.init_db()
+    except Exception as db_err:
+        print(f"[Server] 資料庫初始化略過: {db_err}")
+
+@app.route("/")
+def index():
+    return send_from_directory(PUBLIC_DIR, "index.html")
 
 @app.route("/api/weather/current", methods=["GET"])
 def get_current_weather():
     try:
         data = cwa_service.fetch_realtime_observations()
         features = data.get("data", {}).get("features", [])
+
+        if IS_VERCEL:
+            # Vercel：直接回傳中央氣象局即時資料（不寫入資料庫）
+            return jsonify(data)
+
+        # 本機：寫入 SQLite 後，改由 data.db 讀取回傳
         if features:
-            try:
-                database.save_station_observations(features) # Vercel 檔案系統唯讀，寫入失敗不影響回傳
-            except Exception as db_err:
-                print(f"[Server] 測站資料寫入資料庫略過: {db_err}")
+            database.save_station_observations(features)
+        db_features = database.get_latest_station_features()
+        if db_features:
+            return jsonify(cwa_service.build_observation_response(db_features, source="SQLite data.db (CWA O-A0003-001)"))
         return jsonify(data)
     except Exception as e:
+        # 本機若 CWA 連線失敗，退回讀取 SQLite 既有資料
+        if not IS_VERCEL:
+            try:
+                db_features = database.get_latest_station_features()
+                if db_features:
+                    return jsonify(cwa_service.build_observation_response(db_features, source="SQLite data.db (cache)"))
+            except Exception:
+                pass
         return jsonify({"error": str(e), "success": False}), 500
 
 @app.route("/api/weather/forecast", methods=["GET"])
@@ -35,19 +61,22 @@ def get_forecast():
     try:
         region = request.args.get("region")
         if region:
+            if IS_VERCEL:
+                # Vercel：直接使用中央氣象局預報資料
+                fc = cwa_service.fetch_week_forecasts()
+                records = fc.get("locations", {}).get(region, [])
+                return jsonify({"success": True, "region": region, "forecasts": records})
+
+            # 本機：優先讀取 SQLite，無資料再抓 CWA 並寫入
             try:
                 records = database.get_forecasts_by_region(region)
             except Exception:
                 records = []
             if not records:
                 fc = cwa_service.fetch_week_forecasts()
-                locs = fc.get("locations", {})
-                records = locs.get(region, [])
+                records = fc.get("locations", {}).get(region, [])
                 if records:
-                    try:
-                        database.save_forecasts(region, records)
-                    except Exception as db_err:
-                        print(f"[Server] 預報資料寫入資料庫略過: {db_err}")
+                    database.save_forecasts(region, records)
             return jsonify({"success": True, "region": region, "forecasts": records})
         else:
             fc = cwa_service.fetch_week_forecasts()
@@ -58,10 +87,12 @@ def get_forecast():
 @app.route("/api/weather/regions", methods=["GET"])
 def get_regions():
     try:
-        try:
+        if IS_VERCEL:
+            # Vercel：直接由中央氣象局預報資料取得縣市清單
+            fc = cwa_service.fetch_week_forecasts()
+            regions = list(fc.get("locations", {}).keys())
+        else:
             regions = database.get_distinct_regions()
-        except Exception:
-            regions = []
         return jsonify({"success": True, "regions": regions})
     except Exception as e:
         return jsonify({"error": str(e), "success": False}), 500

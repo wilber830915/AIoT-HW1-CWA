@@ -43,6 +43,37 @@ def set_cache(key: str, val: Any, ttl: int = CACHE_TTL):
     CACHE[key] = (val, time.time() + ttl)
 
 
+def summarize_features(features: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """計算全台天氣統計摘要"""
+    temps = [f["properties"]["temperature"] for f in features if f["properties"].get("temperature") is not None]
+    winds = [f["properties"]["windSpeed"] for f in features if f["properties"].get("windSpeed") is not None]
+    rains = [f["properties"]["precipitation"] for f in features if f["properties"].get("precipitation") is not None]
+
+    return {
+        "stationCount": len(features),
+        "maxTemperature": max(temps) if temps else 28.0,
+        "minTemperature": min(temps) if temps else 18.0,
+        "avgTemperature": round(sum(temps)/len(temps), 1) if temps else 24.0,
+        "maxWindSpeed": max(winds) if winds else 8.5,
+        "maxPrecipitation": max(rains) if rains else 0.0,
+        "updatedAt": time.strftime("%Y-%m-%dT%H:%M:%S+08:00")
+    }
+
+
+def build_observation_response(features: List[Dict[str, Any]], source: str = "CWA OpenData") -> Dict[str, Any]:
+    """將 GeoJSON features 打包成前端統一使用的回應格式"""
+    return {
+        "success": True,
+        "source": source,
+        "stationCount": len(features),
+        "summary": summarize_features(features),
+        "data": {
+            "type": "FeatureCollection",
+            "features": features
+        }
+    }
+
+
 def fetch_realtime_observations() -> Dict[str, Any]:
     """
     海報 Step 4, 5: 取得全台自動氣象站現在天氣觀測報告 (O-A0003-001)
@@ -174,32 +205,8 @@ def fetch_realtime_observations() -> Dict[str, Any]:
         except Exception as e:
             print(f"[CWA Service] 備用源讀取異常: {e}")
 
-    # 計算全台天氣統計摘要
-    temps = [f["properties"]["temperature"] for f in features if f["properties"].get("temperature") is not None]
-    winds = [f["properties"]["windSpeed"] for f in features if f["properties"].get("windSpeed") is not None]
-    rains = [f["properties"]["precipitation"] for f in features if f["properties"].get("precipitation") is not None]
+    result = build_observation_response(features, source="CWA O-A0003-001")
 
-    summary = {
-        "stationCount": len(features),
-        "maxTemperature": max(temps) if temps else 28.0,
-        "minTemperature": min(temps) if temps else 18.0,
-        "avgTemperature": round(sum(temps)/len(temps), 1) if temps else 24.0,
-        "maxWindSpeed": max(winds) if winds else 8.5,
-        "maxPrecipitation": max(rains) if rains else 0.0,
-        "updatedAt": time.strftime("%Y-%m-%dT%H:%M:%S+08:00")
-    }
-
-    result = {
-        "success": True,
-        "source": "CWA OpenData",
-        "stationCount": len(features),
-        "summary": summary,
-        "data": {
-            "type": "FeatureCollection",
-            "features": features
-        }
-    }
-    
     set_cache(cache_key, result, ttl=180)
     return result
 
