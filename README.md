@@ -1,10 +1,36 @@
-# 🌤️ 台灣即時氣象地圖專案
-
-本專案結合了中央氣象署 (CWA) OpenData API、SQLite 資料庫持久化儲存，以及極具科技感的現代化深色玻璃擬態 (Glassmorphism) 全台互動式天氣地圖。
+GitHub Repository: https://github.com/wilber830915/AIoT-HW1-CWA
 
 Live Demo: https://aiot-hw1-cwa.vercel.app/
 
 ![台灣即時氣象地圖](aiot-hw1-cwa.vercel.app_.png)
+
+---
+
+# 🌤️ 台灣即時氣象地圖專案
+
+本專案結合了中央氣象署 (CWA) OpenData API、SQLite 資料庫持久化儲存，以及極具科技感的現代化深色玻璃擬態 (Glassmorphism) 全台互動式天氣地圖。
+
+---
+
+## 🚀 快速開始與部署
+
+### 本機執行（SQLite 版本）
+```bash
+pip install -r requirements.txt
+python server.py
+# 開啟 http://127.0.0.1:8000
+```
+本機資料流：`CWA O-A0003-001` → 寫入 `data.db` → 網頁讀取 `data.db`。
+若 CWA 連線失敗，會自動退回讀取資料庫既有快取。靜態網頁（`public/`）由 Flask 一併提供。
+
+### Vercel 部署（即時 API 版本）
+`vercel.json` 已設定建置與路由（`/api/*` → `server.py`，其餘 → `public/`）。
+Vercel 執行環境會自動帶入 `VERCEL=1`，此時程式**跳過 SQLite**，直接使用中央氣象局即時資料（serverless 檔案系統唯讀，無法寫入資料庫）。
+
+### Streamlit 課程示範版（可選）
+```bash
+streamlit run streamlit_app.py
+```
 
 ---
 
@@ -27,7 +53,7 @@ Live Demo: https://aiot-hw1-cwa.vercel.app/
 
 ### 2. 完整實作微課程 24 步驟核心成果
 * **CWA API 資料擷取**：介接 `F-D0047-091` (一週天氣預報) 與 `O-A0003-001` (自動氣象站現在天氣觀測報告)
-* **SQLite 資料庫儲存**：本地 `data.db`，設計 `TemperatureForecasts` 表格結構
+* **SQLite 資料庫儲存（本機）**：寫入本地 `data.db`，設計 `TemperatureForecasts`（氣溫預報）與 `StationObservations`（即時測站）兩張表；Vercel 版則直接使用 CWA 即時 API
 * **一週最高溫與最低溫平滑折線圖**：採用 Chart.js 繪製雙軸漸層貝茲曲線（最高溫 MaxT 紅線 vs 最低溫 MinT 藍線）
 * **預報資料表格**：清楚呈現日期、天氣概況、最低溫、最高溫、溫差與降雨機率 (PoP)
 * **地區下拉選單**：支援北部、中部、南部、東部、離島與 22 個縣市快速切換連動
@@ -38,19 +64,21 @@ Live Demo: https://aiot-hw1-cwa.vercel.app/
 
 ```text
 L3_CWAv2/
-├── .env.local             # CWA API Key 金鑰設定檔
-├── .env.example           # 環境變數範例
-├── requirements.txt       # 相依套件清單 (requests, pandas)
-├── cwa_service.py         # CWA API 請求服務、快取與資料解析
-├── database.py            # SQLite data.db 管理、資料表設計與 SQL 查詢
-├── server.py              # 高效輕量 Python Web 伺服器 (REST API + 靜態網頁)
-├── streamlit_app.py       # 嚴格對照微課程海報 Step 11~19 之 Streamlit 實作版本
-├── data.db                # SQLite 氣象資料庫
-└── public/                # 現代化前端靜態檔案
-    ├── index.html         # 網頁主架構 (類 Windy 地圖 + 頂部狀態列 + 預報抽屜)
-    ├── styles.css         # 現代深色玻璃擬態樣式
-    ├── app.js             # Leaflet 地圖、圖層渲染、雷達回波、Chart.js 折線圖
-    └── counties.geojson   # 台灣 22 縣市精緻向量地圖圖資
+├── .env.example                 # 環境變數範例 (CWA_API_KEY / CWA_BASE_URL)
+├── .env.local                   # 本機 CWA API Key（不納入版控）
+├── requirements.txt             # 相依套件 (Flask, flask-cors, requests, pandas, streamlit, folium…)
+├── cwa_service.py               # CWA API 請求服務、記憶體快取與 JSON 解析
+├── database.py                  # SQLite data.db 管理、資料表設計與 SQL 查詢
+├── server.py                    # Flask Web 伺服器 (REST API + public/ 靜態網頁；本機/Vercel 自動切換)
+├── streamlit_app.py             # 對照微課程海報 Step 11~19 之 Streamlit 實作版本
+├── vercel.json                  # Vercel 建置與路由設定
+├── data.db                      # SQLite 氣象資料庫（本機執行時自動產生，不納入版控）
+├── aiot-hw1-cwa.vercel.app_.png # Live Demo 截圖
+└── public/                      # 現代化前端靜態檔案
+    ├── index.html               # 網頁主架構 (類 Windy 地圖 + 頂部狀態列 + 預報抽屜)
+    ├── styles.css               # 現代深色玻璃擬態樣式
+    ├── app.js                   # Leaflet 地圖、圖層渲染、雷達回波、Chart.js 折線圖
+    └── counties.geojson         # 台灣 22 縣市精緻向量地圖圖資
 ```
 ---
 
@@ -77,9 +105,11 @@ L3_CWAv2/
 
 | 端點 | 方法 | 說明 |
 |---|---|---|
-| `/api/weather/current` | GET | 取得全台 360+ 測站即時觀測 GeoJSON、極端統計與連線狀態 |
-| `/api/weather/forecast?region=縣市名稱` | GET | 從 SQLite 取得指定縣市未來 7 天氣溫預報、降雨機率與天氣現象 |
-| `/api/weather/regions` | GET | 取得資料庫中所有已有預報之縣市地區清單 |
-| `/api/warnings` | GET | 取得即時中央氣象署氣象特報與警報清單 |
-| `/api/typhoon` | GET | 取得即時颱風觀測路徑與暴風半徑 |
-| `/api/sync` | POST | 手動強制觸發從 CWA API 更新並重新同步寫入 SQLite 資料庫 |
+| `/api/weather/current` | GET | 全台 360+ 測站即時觀測 GeoJSON、極端統計與連線狀態（本機由 `data.db` 讀取，Vercel 直接回 CWA `O-A0003-001`） |
+| `/api/weather/forecast?region=縣市名稱` | GET | 指定縣市未來 7 天氣溫預報、降雨機率與天氣現象（本機由 `data.db` 讀取，Vercel 直接回 CWA `F-D0047-091`） |
+| `/api/weather/regions` | GET | 可用縣市清單（本機讀 `data.db`；Vercel 取自 CWA 預報縣市） |
+| `/api/warnings` | GET | 中央氣象署即時氣象特報與警報清單（CWA `W-C0033-001`） |
+| `/api/typhoon` | GET | 即時颱風觀測路徑與暴風半徑（經外部氣象資料鏡像取得） |
+| `/api/sync` | POST | 手動觸發從 CWA 更新並重新同步寫入 SQLite 資料庫（僅本機有效） |
+
+> 註：前端目前實際呼叫的端點為 `/api/weather/current`、`/api/weather/forecast`、`/api/warnings`、`/api/typhoon`；`/api/weather/regions` 與 `/api/sync` 供外部整合使用。

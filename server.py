@@ -1,8 +1,10 @@
 """
 server.py
-輕量高效 Python Web 伺服器
+Flask Web 伺服器
 提供 RESTful API 與靜態資源服務 (public/ 目錄)
-使用標準庫 http.server，開箱即用無需額外依賴
+執行環境自動切換：
+  - 本機：抓取 CWA O-A0003-001 後寫入 SQLite (data.db)，網頁再讀取 data.db
+  - Vercel (VERCEL=1)：直接使用中央氣象局即時資料，不寫入資料庫
 """
 import os
 from flask import Flask, jsonify, request, send_from_directory
