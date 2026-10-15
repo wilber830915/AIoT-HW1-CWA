@@ -2,6 +2,10 @@
 
 本專案結合了中央氣象署 (CWA) OpenData API、SQLite 資料庫持久化儲存，以及極具科技感的現代化深色玻璃擬態 (Glassmorphism) 全台互動式天氣地圖。
 
+Live Demo: https://aiot-hw1-cwa.vercel.app/
+
+![台灣即時氣象地圖](aiot-hw1-cwa.vercel.app_.png)
+
 ---
 
 ## 🌟 核心特色與功能亮點
